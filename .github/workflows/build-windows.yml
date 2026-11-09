@@ -1,0 +1,42 @@
+name: Build GammaRay for Windows
+
+on:
+  workflow_dispatch: # يتيح لك تشغيل البناء يدوياً بضغطة زر
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    # 1. جلب كود GammaRay
+    - name: Checkout Source Code
+      uses: actions/checkout@v4
+
+    # 2. إعداد بيئة مجمع ميكروسوفت (MSVC)
+    - name: Configure MSVC
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: x64
+
+    # 3. تثبيت إطار عمل Qt (تأكد من تعديل الإصدار هنا ليطابق البرنامج المراد تحليله)
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v4
+      with:
+        version: '6.5.3' # يمكنك تغييرها إلى '5.15.2' إذا كان البرنامج المستهدف يعتمد على Qt 5
+        host: 'windows'
+        arch: 'win64_msvc2019_64' # المعمارية المتوافقة مع ويندوز
+
+    # 4. بناء البرنامج باستخدام CMake
+    - name: Run CMake and Build
+      run: |
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=D:\GammaRay_Output
+        cmake --build . --target install --config Release
+
+    # 5. ضغط الملفات الناتجة وحفظها
+    - name: Upload Build Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: GammaRay-Windows-x64
+        path: D:\GammaRay_Output
