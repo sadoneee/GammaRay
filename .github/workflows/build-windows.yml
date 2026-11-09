@@ -1,42 +1,60 @@
-name: Build GammaRay for Windows
+
+name: Build GammaRay 3.2.2 for Windows (Qt5)
 
 on:
-  workflow_dispatch: # يتيح لك تشغيل البناء يدوياً بضغطة زر
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: windows-latest
 
     steps:
-    # 1. جلب كود GammaRay
-    - name: Checkout Source Code
-      uses: actions/checkout@v4
+      # 1. Download GammaRay 3.2.2
+      - name: Checkout GammaRay 3.2.2
+        uses: actions/checkout@v4
+        with:
+          repository: KDAB/GammaRay
+          ref: v3.2.2
+          path: GammaRay
 
-    # 2. إعداد بيئة مجمع ميكروسوفت (MSVC)
-    - name: Configure MSVC
-      uses: ilammy/msvc-dev-cmd@v1
-      with:
-        arch: x64
+      # 2. Setup MSVC 2019
+      - name: Configure MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          toolset: 14.29
+          arch: x64
 
-    # 3. تثبيت إطار عمل Qt (تأكد من تعديل الإصدار هنا ليطابق البرنامج المراد تحليله)
-    - name: Install Qt
-      uses: jurplel/install-qt-action@v4
-      with:
-        version: '5.15.2' # يمكنك تغييرها إلى '5.15.2' إذا كان البرنامج المستهدف يعتمد على Qt 5
-        host: 'windows'
-        arch: 'win64_msvc2019_64' # المعمارية المتوافقة مع ويندوز
+      # 3. Install Qt 5.15.2
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '5.15.2'
+          host: windows
+          target: desktop
+          arch: win64_msvc2019_64
 
-    # 4. بناء البرنامج باستخدام CMake
-    - name: Run CMake and Build
-      run: |
-        mkdir build
-        cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=D:\GammaRay_Output
-        cmake --build . --target install --config Release
+      # 4. Configure CMake
+      - name: Configure CMake
+        run: |
+          cmake -S GammaRay -B GammaRay/build `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_INSTALL_PREFIX=D:/GammaRay_Output `
+            -DCMAKE_PREFIX_PATH="$env:QT_ROOT_DIR"
 
-    # 5. ضغط الملفات الناتجة وحفظها
-    - name: Upload Build Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: GammaRay-Windows-x64
-        path: D:\GammaRay_Output
+      # 5. Build GammaRay
+      - name: Build GammaRay
+        run: |
+          cmake --build GammaRay/build --config Release --parallel
+
+      # 6. Install GammaRay
+      - name: Install GammaRay
+        run: |
+          cmake --install GammaRay/build --config Release
+
+      # 7. Upload Artifact
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GammaRay-3.2.2-Qt5-Windows-x64
+          path: D:/GammaRay_Output
+          if-no-files-found: error
