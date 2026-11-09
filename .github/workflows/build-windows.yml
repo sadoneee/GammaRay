@@ -1,11 +1,20 @@
-name: Build GammaRay for Windows
+name: Build GammaRay for Windows (Qt5 & Qt6)
 
 on:
-  workflow_dispatch: # يتيح لك تشغيل البناء يدوياً بضغطة زر
+  workflow_dispatch: # تشغيل يدوياً بضغطة زر
 
 jobs:
   build:
     runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+          - qt_version: '5.15.2'
+            qt_arch: 'win64_msvc2019_64'
+            output_name: 'GammaRay-Qt5-Windows-x64'
+          - qt_version: '6.5.3'
+            qt_arch: 'win64_msvc2019_64'
+            output_name: 'GammaRay-Qt6-Windows-x64'
 
     steps:
     # 1. جلب كود GammaRay
@@ -18,25 +27,25 @@ jobs:
       with:
         arch: x64
 
-    # 3. تثبيت إطار عمل Qt (تأكد من تعديل الإصدار هنا ليطابق البرنامج المراد تحليله)
+    # 3. تثبيت إطار عمل Qt بناءً على المصفوفة (Matrix)
     - name: Install Qt
       uses: jurplel/install-qt-action@v4
       with:
-        version: '6.5.3' # يمكنك تغييرها إلى '5.15.2' إذا كان البرنامج المستهدف يعتمد على Qt 5
+        version: ${{ matrix.qt_version }}
         host: 'windows'
-        arch: 'win64_msvc2019_64' # المعمارية المتوافقة مع ويندوز
+        arch: ${{ matrix.qt_arch }}
 
-    # 4. بناء البرنامج باستخدام CMake
+    # 4. بناء البرنامج باستخدام CMake لكل نسخة
     - name: Run CMake and Build
       run: |
         mkdir build
         cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=D:\GammaRay_Output
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=D:\GammaRay_Output_${{ matrix.output_name }}
         cmake --build . --target install --config Release
 
-    # 5. ضغط الملفات الناتجة وحفظها
+    # 5. رفع الملفات الناتجة بشكل منفصل
     - name: Upload Build Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: GammaRay-Windows-x64
-        path: D:\GammaRay_Output
+        name: ${{ matrix.output_name }}
+        path: D:\GammaRay_Output_${{ matrix.output_name }}
